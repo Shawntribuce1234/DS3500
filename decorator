@@ -1,0 +1,99 @@
+"""
+DS3500 · Decorators
+"""
+
+import pandas as pd
+import datetime
+import functools
+
+BOSTON_311_PATH = "data/boston_311_2026.csv"
+BOSTON_AIR_QUALITY_PATH = "data/air_quality.csv"
+
+##################### SOME FUNCTIONS FROM LAST WEEK #######################
+def timer(func):
+    """A decorator that prints how long a function took to run."""
+    @functools.wraps(func) # this preserves the docstring and name of the original function
+    def wrapper(*args, **kwargs):
+        start_time = datetime.datetime.now()
+        result = func(*args, **kwargs) # this is how you call the original function with the same arguments
+        func()
+        end_time = datetime.datetime.now()
+        print(f"Time taken: {end_time - start_time:.4f} seconds")
+        return result
+    return wrapper
+
+
+def validate_input(required_cols):
+    """A decorator that takes a list of columns as input and checks
+    if they are in the dataframe when building the wrapper."""
+    def decorator(func):
+        @functools.wraps(func)
+        def wrapper(df, *args, **kwargs):
+            missing_cols = [col for col in required_cols if col not in df.columns]
+            if missing_cols:
+                raise ValueError(f"Missing columns are {missing_cols}")
+            return func(df, *args, **kwargs)
+        return wrapper
+    pass
+
+@timer
+
+def load_data(fp):
+    df = pd.read_csv(fp)
+    return df
+
+@validate_input(required_cols=["neighborhood", "on_time"])
+def get_neighborhoods(df):
+    """Return list of neighborhoods with 'All' as the first option."""
+    vals = df["neighborhood"].fillna("Unknown").unique().tolist()
+    vals_sorted = sorted(vals, key=str.lower)
+    return ["All"] + vals_sorted
+
+@validate_input(required_cols=["on_time"])
+def percent_resolved_on_time(df):
+    """Compute percentage of cases resolved on time.
+    """
+    on_time_count = len(df[df["on_time"] == "ONTIME"])
+    percent = (on_time_count / len(df)) * 100
+    return round(percent, 2)
+###########################################################################
+
+# a simple function to start wrapping
+
+
+def shout(func):
+    """A decorator that announces when a function starts and finishes.
+    Have this return a function."""
+    @functools.wraps(func) # this preserves the docstring and name of the original function
+    def wrapper():
+        print(f"BEGINNING {func.__name__}!")
+        func()
+        print("FINISHED!")
+        pass
+    return wrapper
+
+@shout
+def say_hello():
+    """Say hello to the class."""
+    print("Hey DS3500")
+
+def wrapper_template(func):
+    """A template for a wrapper function that preserves the docstring,
+    args and kwargs."""
+    pass
+
+
+def main():
+    # say hello
+    #say_hello()
+    #this should print the name of the function, which is preserved by the wrapper
+   # print(say_hello.__name__)
+    # now change the behavior to shout when saying hello *manually*
+    #shout_hello = shout(say_hello)
+    #shout_hello()
+    #
+    #df = BOSTON_311_PATH
+    #load_data(BOSTON_311_PATH)
+    print(BOSTON_311_PATH.columns)
+if __name__ == "__main__":
+    main()
